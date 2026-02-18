@@ -14,7 +14,7 @@ function clearSessionCookie(response: NextResponse) {
 }
 
 export async function POST(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/login", request.url));
+  const response = NextResponse.redirect(new URL("/login", request.url), { status: 303 });
   clearSessionCookie(response);
   return response;
 }

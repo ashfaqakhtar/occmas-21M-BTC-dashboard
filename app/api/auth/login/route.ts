@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
     if (username !== adminUsername || password !== adminPassword) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("error", "invalid_credentials");
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(loginUrl, { status: 303 });
     }
 
     const redirectUrl = new URL(nextPath.startsWith("/") ? nextPath : "/", request.url);
-    const response = NextResponse.redirect(redirectUrl);
+    const response = NextResponse.redirect(redirectUrl, { status: 303 });
 
     response.cookies.set(AUTH_COOKIE_NAME, authToken, {
       httpOnly: true,
