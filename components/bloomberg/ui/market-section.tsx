@@ -12,6 +12,7 @@ type MarketSectionProps = {
   title: string;
   items: MarketItem[];
   sectionNum: string;
+  regionKey: "americas" | "emea" | "asiaPacific";
   isDarkMode: boolean;
   updatedCells: Record<string, boolean>;
   updatedSparklines: Record<string, boolean>;
@@ -21,6 +22,7 @@ export function MarketSection({
   title,
   items,
   sectionNum,
+  regionKey,
   isDarkMode,
   updatedCells,
   updatedSparklines,
@@ -32,9 +34,7 @@ export function MarketSection({
   const [showFutures] = useAtom(showFuturesAtom);
 
   const colors = isDarkMode ? bloombergColors.dark : bloombergColors.light;
-  const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis";
-  const region = title.toLowerCase().replace("/", "");
-
+  const fixedColumnClass = "w-[140px] sm:w-[170px] whitespace-nowrap overflow-hidden text-ellipsis";
   // Apply section-level filters
   let filteredItems = [...items];
 
@@ -95,7 +95,7 @@ export function MarketSection({
         <TableRow className={`bg-[${colors.surface}]`}>
           <TableCell
             className={cn(
-              `sticky left-0 bg-[${colors.surface}] px-2 py-1 text-left font-bold`,
+              `sticky left-0 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
               fixedColumnClass
             )}
             colSpan={1}
@@ -120,9 +120,9 @@ export function MarketSection({
       <TableRow className={`bg-[${colors.surface}]`}>
         <TableCell
           className={cn(
-            `sticky left-0 bg-[${colors.surface}] px-2 py-1 text-left font-bold`,
-            fixedColumnClass
-          )}
+              `sticky left-0 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
+              fixedColumnClass
+            )}
           colSpan={1}
         >
           {sectionNum} {title}
@@ -133,7 +133,7 @@ export function MarketSection({
         <MarketRow
           key={`${item.id}-${index}`}
           item={item}
-          region={region}
+          region={regionKey}
           isDarkMode={isDarkMode}
           updatedCells={updatedCells}
           updatedSparklines={updatedSparklines}

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
-import { fetchMarketData, simulateMarketUpdate } from "../api/market-data";
+import { fetchMarketData } from "../api/market-data";
 import {
   dataSourceAtom,
   isFromRedisAtom,
@@ -31,6 +31,8 @@ export function useMarketDataQuery() {
 
   // Refs for tracking updates
   const prevDataRef = useRef<MarketData | null>(null);
+  const cellHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sparklineHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Use React Query to fetch market data with appropriate polling
   const {
@@ -102,22 +104,37 @@ export function useMarketDataQuery() {
     // Only update atoms if there are actual changes
     if (Object.keys(newUpdatedCells).length > 0) {
       setUpdatedCells(newUpdatedCells);
+      if (cellHighlightTimerRef.current) {
+        clearTimeout(cellHighlightTimerRef.current);
+      }
+      cellHighlightTimerRef.current = setTimeout(() => {
+        setUpdatedCells({});
+      }, 1200);
     }
 
     if (Object.keys(newUpdatedSparklines).length > 0) {
       setUpdatedSparklines(newUpdatedSparklines);
+      if (sparklineHighlightTimerRef.current) {
+        clearTimeout(sparklineHighlightTimerRef.current);
+      }
+      sparklineHighlightTimerRef.current = setTimeout(() => {
+        setUpdatedSparklines({});
+      }, 1200);
     }
 
     // Update last updated time
     setLastUpdated(new Date());
 
     // Update data source info if it exists
-    if (newData.source) {
-      setDataSource(newData.source);
+    const incomingSource = (newData.dataSource || newData.source) as string | undefined;
+    if (incomingSource) {
+      setDataSource(incomingSource);
     }
 
-    if (newData.fromRedis !== undefined) {
-      setIsFromRedis(newData.fromRedis);
+    const incomingFromRedis =
+      newData.isFromRedis !== undefined ? newData.isFromRedis : newData.fromRedis;
+    if (incomingFromRedis !== undefined) {
+      setIsFromRedis(incomingFromRedis as boolean);
     }
 
     // Update the previous data ref
@@ -130,6 +147,17 @@ export function useMarketDataQuery() {
     setDataSource,
     setIsFromRedis,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (cellHighlightTimerRef.current) {
+        clearTimeout(cellHighlightTimerRef.current);
+      }
+      if (sparklineHighlightTimerRef.current) {
+        clearTimeout(sparklineHighlightTimerRef.current);
+      }
+    };
+  }, []);
 
   // Toggle real-time updates
   const toggleRealTimeUpdates = useCallback(() => {

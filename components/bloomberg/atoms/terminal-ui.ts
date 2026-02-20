@@ -62,7 +62,7 @@ export const resetFiltersAtom = atom(null, (get, set) => {
 });
 
 export const defaultWatchlists: Array<{ name: string; indices: string[] }> = [
-  { name: "BTC", indices: ["BTC"] },
+  { name: "BTC", indices: ["BTC", "IBIT"] },
   {
     name: "MSTR + Major Miners",
     indices: ["MSTR", "MARA", "RIOT", "CLSK", "HUT", "IREN", "CORZ"],

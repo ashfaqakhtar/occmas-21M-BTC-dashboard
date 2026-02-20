@@ -2,9 +2,10 @@
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const BASE_URL = "https://www.alphavantage.co/query";
 
-// Map our market indices to Alpha Vantage symbols
+// Map our market indices to live symbols (Yahoo + Binance/Alpha fallback for BTC)
 const MARKET_INDICES = {
-  BTC: "IBIT",
+  BTC: "BTC",
+  IBIT: "IBIT",
   MSTR: "MSTR",
   MARA: "MARA",
   RIOT: "RIOT",
@@ -12,13 +13,104 @@ const MARKET_INDICES = {
   HUT: "HUT",
   IREN: "IREN",
   CORZ: "CORZ",
-  SPX: "SPY",
-  NDX: "QQQ",
-  DXY: "UUP",
-  "US 2Y (SHY)": "SHY",
-  "US 10Y (IEF)": "IEF",
-  GOLD: "GLD",
+  SPX: "^GSPC",
+  NDX: "^NDX",
+  DXY: "DX-Y.NYB",
+  "US 2Y (SHY)": "^FVX",
+  "US 10Y (IEF)": "^TNX",
+  GOLD: "XAUUSD=X",
 };
+
+type YahooQuote = {
+  price: number;
+  change: number;
+  pctChange: number;
+};
+
+export async function fetchYahooQuotes(symbols: string[]): Promise<Record<string, YahooQuote>> {
+  if (symbols.length === 0) return {};
+
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(","))}`;
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      console.warn(`Yahoo quote API error: ${response.status}`);
+      return {};
+    }
+
+    const data = await response.json();
+    const results = data?.quoteResponse?.result;
+    if (!Array.isArray(results)) {
+      console.warn("Invalid Yahoo quote response:", data);
+      return {};
+    }
+
+    const quoteMap: Record<string, YahooQuote> = {};
+
+    for (const item of results) {
+      const symbol = item?.symbol as string | undefined;
+      const price = Number.parseFloat(String(item?.regularMarketPrice));
+      const change = Number.parseFloat(String(item?.regularMarketChange));
+      const pctChange = Number.parseFloat(String(item?.regularMarketChangePercent));
+
+      if (!symbol || !Number.isFinite(price)) continue;
+
+      quoteMap[symbol] = {
+        price,
+        change: Number.isFinite(change) ? change : 0,
+        pctChange: Number.isFinite(pctChange) ? pctChange : 0,
+      };
+    }
+
+    return quoteMap;
+  } catch (error) {
+    console.error("Error fetching Yahoo quotes:", error);
+    return {};
+  }
+}
+
+// Fetch BTC/USD spot rate via Alpha Vantage crypto endpoint
+export async function fetchBtcUsdQuote() {
+  try {
+    // Primary: Binance public ticker (closest to exchange live ticks).
+    const binanceResponse = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", {
+      cache: "no-store",
+    });
+    if (binanceResponse.ok) {
+      const binanceData = await binanceResponse.json();
+      const binancePrice = Number.parseFloat(binanceData?.price);
+      if (Number.isFinite(binancePrice)) {
+        return binancePrice;
+      }
+    }
+
+    // Fallback: Alpha Vantage crypto endpoint.
+    const url = `${BASE_URL}?function=CURRENCY_EXCHANGE_RATE&from_currency=BTC&to_currency=USD&apikey=${API_KEY}`;
+    const response = await fetch(url, { cache: "no-store" });
+
+    if (!response.ok) {
+      console.warn(`Alpha Vantage API error for BTC/USD: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const rate = data?.["Realtime Currency Exchange Rate"]?.["5. Exchange Rate"];
+
+    if (!rate) {
+      if (data.Note) {
+        console.warn("Alpha Vantage API limit reached:", data.Note);
+      } else {
+        console.warn("Invalid BTC/USD data received:", data);
+      }
+      return null;
+    }
+
+    return Number.parseFloat(rate);
+  } catch (error) {
+    console.error("Error fetching BTC/USD quote:", error);
+    return null;
+  }
+}
 
 // Helper function to generate random sparkline data
 export function generateRandomSparkline(): number[] {
@@ -121,7 +213,7 @@ export function generateFallbackData(indexName: string, region: string, index: n
   return {
     id: indexName,
     num: `${region === "americas" ? "1" : region === "emea" ? "2" : "3"}${index + 1})`,
-    rmi: "□",
+    rmi: "RMI",
     value,
     change,
     pctChange,
@@ -167,7 +259,7 @@ export interface FetchAllMarketDataResult {
 
 export async function fetchAllMarketData(): Promise<FetchAllMarketDataResult> {
   const regions = {
-    americas: ["BTC", "MSTR", "MARA", "RIOT", "CLSK", "HUT", "IREN", "CORZ"],
+    americas: ["BTC", "IBIT", "MSTR", "MARA", "RIOT", "CLSK", "HUT", "IREN", "CORZ"],
     emea: ["SPX", "NDX", "DXY"],
     asiaPacific: ["US 2Y (SHY)", "US 10Y (IEF)", "GOLD"],
   };
@@ -177,12 +269,13 @@ export async function fetchAllMarketData(): Promise<FetchAllMarketDataResult> {
     emea: [],
     asiaPacific: [],
     lastUpdated: new Date().toISOString(),
-    dataSource: "alpha-vantage",
+    dataSource: "yahoo-binance",
   };
 
-  // Track API calls to respect limits
-  let apiCalls = 0;
-  const MAX_API_CALLS = 5; // Reduced from 25 to avoid hitting limits too quickly
+  const nonBtcSymbols = Object.entries(MARKET_INDICES)
+    .filter(([indexName]) => indexName !== "BTC")
+    .map(([, symbol]) => symbol);
+  const yahooQuotes = await fetchYahooQuotes(nonBtcSymbols);
 
   // Process each region
   for (const [region, indices] of Object.entries(regions)) {
@@ -191,50 +284,50 @@ export async function fetchAllMarketData(): Promise<FetchAllMarketDataResult> {
       const indexName = indices[i];
 
       try {
-        // Check if we've reached API limit
-        if (apiCalls >= MAX_API_CALLS) {
-          console.warn("API call limit reached, using fallback data for remaining indices");
-          // Add fallback data
-          result[regionKey].push(generateFallbackData(indexName, region, i));
-          continue;
-        }
-
         const symbol = MARKET_INDICES[indexName as keyof typeof MARKET_INDICES];
 
-        // Fetch quote data from Alpha Vantage
-        const quote = await fetchGlobalQuote(symbol);
-        apiCalls++;
+        let value = Number.NaN;
+        let change = Number.NaN;
+        let pctChange = Number.NaN;
 
-        // Try to fetch intraday data for 2Day column if we haven't hit API limit
-        let twoDayData = null;
-        if (apiCalls < MAX_API_CALLS) {
-          twoDayData = await fetchIntradayData(symbol);
-          apiCalls++;
+        if (indexName === "BTC") {
+          const btcValue = await fetchBtcUsdQuote();
+          if (typeof btcValue === "number" && Number.isFinite(btcValue)) {
+            value = btcValue;
+            change = 0;
+            pctChange = 0;
+          }
+        } else {
+          const quote = yahooQuotes[symbol];
+          if (quote) {
+            value = quote.price;
+            change = quote.change;
+            pctChange = quote.pctChange;
+
+            // Yahoo treasury symbols are quoted as 10x yield (e.g. 42.5 -> 4.25%).
+            if (indexName === "US 2Y (SHY)" || indexName === "US 10Y (IEF)") {
+              value = value / 10;
+              change = change / 10;
+            }
+          }
         }
 
-        if (quote) {
-          // Transform Alpha Vantage data to match our format
-          const value = Number.parseFloat(quote["05. price"]);
-          const change = Number.parseFloat(quote["09. change"]);
-          const pctChange = Number.parseFloat(quote["10. change percent"].replace("%", ""));
+        const twoDayData = null;
 
+        if (Number.isFinite(value)) {
           // Generate some random data for fields not provided by Alpha Vantage
           const avat = Math.random() * 100 - 50;
           const ytd = Math.random() * 30 - 15;
           const ytdCur = Math.random() * 30 - 10;
 
           // Use real intraday data if available, otherwise fallback to random
-          const sparkline1 = twoDayData
-            ? twoDayData.sparkline.slice(0, 8)
-            : generateRandomSparkline();
-          const sparkline2 = twoDayData
-            ? twoDayData.sparkline.slice(-8)
-            : generateRandomSparkline();
+          const sparkline1 = generateRandomSparkline();
+          const sparkline2 = generateRandomSparkline();
 
           result[regionKey].push({
             id: indexName,
             num: `${region === "americas" ? "1" : region === "emea" ? "2" : "3"}${i + 1})`,
-            rmi: "□",
+            rmi: "RMI",
             value,
             change,
             pctChange,
@@ -249,7 +342,7 @@ export async function fetchAllMarketData(): Promise<FetchAllMarketDataResult> {
             sparkline1,
             sparkline2,
             // Store the raw data for potential use
-            twoDayData: twoDayData ? twoDayData.raw : null,
+            twoDayData: null,
           });
         } else {
           // Add fallback data if API call failed
@@ -259,11 +352,6 @@ export async function fetchAllMarketData(): Promise<FetchAllMarketDataResult> {
         console.error(`Error processing ${indexName}:`, error);
         // Add fallback data on error
         result[regionKey].push(generateFallbackData(indexName, region, i));
-      }
-
-      // Add a small delay between API calls to avoid rate limiting
-      if (i < indices.length - 1 && apiCalls < MAX_API_CALLS) {
-        await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
   }

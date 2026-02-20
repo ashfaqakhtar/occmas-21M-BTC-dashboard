@@ -12,7 +12,7 @@ const GlobalState = {
 };
 
 // UI state atoms
-export const isDarkModeAtom = atom(false);
+export const isDarkModeAtom = atom(true);
 export const errorAtom = atom<string | null>(null);
 export const isShortcutsHelpOpenAtom = atom(false);
 

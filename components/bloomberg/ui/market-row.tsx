@@ -54,7 +54,8 @@ export function MarketRow({
   const [, setBenchmarkIndex] = useAtom(rmiBenchmarkIndexAtom);
 
   const colors = isDarkMode ? bloombergColors.dark : bloombergColors.light;
-  const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis";
+  const fixedColumnClass = "w-[140px] sm:w-[170px] whitespace-nowrap overflow-hidden text-ellipsis";
+  const rmiLabel = item.rmi && item.rmi !== "â–¡" && item.rmi !== "□" ? item.rmi : "RMI";
 
   // Handle RMI cell click to navigate to RMI view
   const handleRmiClick = () => {
@@ -63,7 +64,7 @@ export function MarketRow({
       setSelectedRegion("americas");
     } else if (region === "emea") {
       setSelectedRegion("emea");
-    } else if (region === "asiapacific") {
+    } else if (region === "asiaPacific") {
       setSelectedRegion("asiaPacific");
     }
     // Set the selected security and default benchmark
@@ -76,20 +77,20 @@ export function MarketRow({
   return (
     <TableRow className={`border-b border-[${colors.border}]`}>
       <TableCell
-        className={cn(`sticky left-0 bg-[${colors.background}] px-2 py-1`, fixedColumnClass)}
+        className={cn(`sticky left-0 bg-[${colors.background}] px-3 py-2`, fixedColumnClass)}
       >
         <div className="flex items-center gap-2">
-          <span className={`text-[${colors.textSecondary}] text-xs`}>{item.num}</span>
-          <span className={`text-[${colors.accent}] text-xs`}>{item.id}</span>
+          <span className={`text-[${colors.textSecondary}] text-sm`}>{item.num}</span>
+          <span className={`text-[${colors.accent}] text-sm font-medium`}>{item.id}</span>
         </div>
       </TableCell>
       <TableCell
-        className="px-2 py-1 text-center text-xs cursor-pointer hover:underline"
+        className="px-3 py-2 text-center text-sm cursor-pointer hover:underline"
         style={{ color: colors.accent }}
         onClick={handleRmiClick}
         title="Click to view RMI analysis"
       >
-        {item.rmi || "—"}
+        {rmiLabel}
       </TableCell>
 
       <SparklineCell
@@ -101,7 +102,7 @@ export function MarketRow({
 
       <TableCell
         className={cn(
-          `px-2 py-1 text-right text-[${isDarkMode ? "#f5f5b8" : "#8b7500"}] text-xs`,
+          `px-3 py-2 text-right text-[${isDarkMode ? "#f5f5b8" : "#8b7500"}] text-sm`,
           updatedCells[`${region}-${item.id}-value`] &&
             "bg-yellow-300 dark:bg-yellow-900 transition-colors duration-500"
         )}
@@ -120,7 +121,7 @@ export function MarketRow({
       </TableCell>
       <TableCell
         className={cn(
-          "px-2 py-1 text-right text-xs",
+          "px-3 py-2 text-right text-sm",
           showYTD
             ? item.ytd > 0
               ? `text-[${colors.positive}]`
@@ -145,7 +146,7 @@ export function MarketRow({
       </TableCell>
       <TableCell
         className={cn(
-          `px-2 py-1 text-right text-xs ${item.pctChange > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`}`,
+          `px-3 py-2 text-right text-sm ${item.pctChange > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`}`,
           updatedCells[`${region}-${item.id}-pctChange`] &&
             "bg-yellow-300 dark:bg-yellow-900 transition-colors duration-500"
         )}
@@ -156,7 +157,7 @@ export function MarketRow({
       </TableCell>
       <TableCell
         className={cn(
-          `px-2 py-1 text-right text-xs ${item.avat > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`} ${showAvat ? "sm:table-cell" : "hidden"}`,
+          `px-3 py-2 text-right text-sm ${item.avat > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`} ${showAvat ? "sm:table-cell" : "hidden"}`,
           updatedCells[`${region}-${item.id}-avat`] &&
             "bg-yellow-300 dark:bg-yellow-900 transition-colors duration-500"
         )}
@@ -165,7 +166,7 @@ export function MarketRow({
       </TableCell>
       <TableCell
         className={cn(
-          `px-2 py-1 text-right text-[${isDarkMode ? "#f5f5b8" : "#8b7500"}] text-xs hidden sm:table-cell`,
+          `px-3 py-2 text-right text-[${isDarkMode ? "#f5f5b8" : "#8b7500"}] text-sm hidden sm:table-cell`,
           updatedCells[`${region}-${item.id}-time`] &&
             "bg-yellow-300 dark:bg-yellow-900 transition-colors duration-500"
         )}
@@ -174,7 +175,7 @@ export function MarketRow({
       </TableCell>
       <TableCell
         className={cn(
-          `px-2 py-1 text-right text-xs ${item.ytd > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`} hidden md:table-cell`,
+          `px-3 py-2 text-right text-sm ${item.ytd > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`} hidden md:table-cell`,
           updatedCells[`${region}-${item.id}-ytd`] &&
             "bg-yellow-300 dark:bg-yellow-900 transition-colors duration-500"
         )}
@@ -183,7 +184,7 @@ export function MarketRow({
       </TableCell>
       <TableCell
         className={cn(
-          `px-2 py-1 text-right text-xs ${item.ytdCur > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`} hidden md:table-cell`,
+          `px-3 py-2 text-right text-sm ${item.ytdCur > 0 ? `text-[${colors.positive}]` : `text-[${colors.negative}]`} hidden md:table-cell`,
           updatedCells[`${region}-${item.id}-ytdCur`] &&
             "bg-yellow-300 dark:bg-yellow-900 transition-colors duration-500"
         )}

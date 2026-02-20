@@ -9,14 +9,14 @@ import {
 } from "@/components/ui/table";
 import { useAtom } from "jotai";
 import { useMemo } from "react";
-import { activeWatchlistAtom, watchlistsAtom } from "../atoms/terminal-ui";
 import { showAvatAtom } from "../atoms";
-import { MarketSection } from ".";
+import { activeWatchlistAtom, watchlistsAtom } from "../atoms/terminal-ui";
 import { useMarketDataQuery } from "../hooks";
 import { bloombergColors, cn } from "../lib/theme-config";
 import type { MarketData } from "../types";
+import { MarketSection } from ".";
 
-const fixedColumnClass = "w-[120px] sm:w-[140px] whitespace-nowrap overflow-hidden text-ellipsis";
+const fixedColumnClass = "w-[140px] sm:w-[170px] whitespace-nowrap overflow-hidden text-ellipsis";
 
 type MarketTableProps = {
   data: MarketData;
@@ -31,14 +31,10 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
   const colors = isDarkMode ? bloombergColors.dark : bloombergColors.light;
 
   const filteredData = useMemo(() => {
-    if (!activeWatchlist) {
-      return data;
-    }
+    if (!activeWatchlist) return data;
 
     const selectedWatchlist = watchlists.find((watchlist) => watchlist.name === activeWatchlist);
-    if (!selectedWatchlist) {
-      return data;
-    }
+    if (!selectedWatchlist) return data;
 
     const symbols = new Set(selectedWatchlist.indices);
 
@@ -59,28 +55,30 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
   }
 
   return (
-    <Table className="w-full border-separate border-spacing-0">
+    <Table className="w-full border-separate border-spacing-0 text-sm">
       <TableHeader>
         <TableRow className={`bg-[${colors.surface}]`}>
           <TableHead
             className={cn(
-              `sticky left-0 bg-[${colors.surface}] px-2 py-1 text-left font-bold`,
+              `sticky left-0 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
               fixedColumnClass
             )}
           >
             Market
           </TableHead>
-          <TableHead className="px-2 py-1 text-center">RMI</TableHead>
-          <TableHead className={`px-2 py-1 text-center bg-[${colors.surface}]`}>2Day</TableHead>
-          <TableHead className="px-2 py-1 text-right">Value</TableHead>
-          <TableHead className="px-2 py-1 text-right">Net Chg</TableHead>
-          <TableHead className="px-2 py-1 text-right">%Chg</TableHead>
-          <TableHead className={`px-2 py-1 text-right ${showAvat ? "sm:table-cell" : "hidden"}`}>
-            Δ AVAT
+          <TableHead className="px-3 py-2 text-center text-sm">RMI</TableHead>
+          <TableHead className={`w-[190px] px-3 py-2 text-center text-sm bg-[${colors.surface}]`}>
+            2Day
           </TableHead>
-          <TableHead className="px-2 py-1 text-right hidden sm:table-cell">Time</TableHead>
-          <TableHead className="px-2 py-1 text-right hidden md:table-cell">%Ytd</TableHead>
-          <TableHead className="px-2 py-1 text-right hidden md:table-cell">%YtdCur</TableHead>
+          <TableHead className="px-3 py-2 text-right text-sm">Value</TableHead>
+          <TableHead className="px-3 py-2 text-right text-sm">Net Chg</TableHead>
+          <TableHead className="px-3 py-2 text-right text-sm">%Chg</TableHead>
+          <TableHead className={`px-3 py-2 text-right text-sm ${showAvat ? "sm:table-cell" : "hidden"}`}>
+            Delta AVAT
+          </TableHead>
+          <TableHead className="px-3 py-2 text-right text-sm hidden sm:table-cell">Time</TableHead>
+          <TableHead className="px-3 py-2 text-right text-sm hidden md:table-cell">%Ytd</TableHead>
+          <TableHead className="px-3 py-2 text-right text-sm hidden md:table-cell">%YtdCur</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -88,6 +86,7 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
           title="Bitcoin & Miners"
           items={filteredData.americas || []}
           sectionNum="1)"
+          regionKey="americas"
           isDarkMode={isDarkMode}
           updatedCells={updatedCells}
           updatedSparklines={updatedSparklines}
@@ -96,6 +95,7 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
           title="Equity & Dollar"
           items={filteredData.emea || []}
           sectionNum="2)"
+          regionKey="emea"
           isDarkMode={isDarkMode}
           updatedCells={updatedCells}
           updatedSparklines={updatedSparklines}
@@ -104,6 +104,7 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
           title="Rates & Gold"
           items={filteredData.asiaPacific || []}
           sectionNum="3)"
+          regionKey="asiaPacific"
           isDarkMode={isDarkMode}
           updatedCells={updatedCells}
           updatedSparklines={updatedSparklines}

@@ -35,7 +35,7 @@ export function SparklineCell({ item, region, isDarkMode, isHighlighted }: Spark
   return (
     <TableCell
       className={cn(
-        `px-2 py-1 w-[100px] bg-[${colors.surface}]`,
+        `px-3 py-2 w-[190px] bg-[${colors.surface}]`,
         isHighlighted && "bg-blue-300 dark:bg-blue-900 transition-colors duration-500"
       )}
     >
@@ -43,8 +43,8 @@ export function SparklineCell({ item, region, isDarkMode, isHighlighted }: Spark
         <Sparkline
           data1={displayData1}
           data2={displayData2}
-          width={80}
-          height={20}
+          width={170}
+          height={28}
           color1={colors.sparklineGray}
           color2={item.change > 0 ? colors.positive : colors.negative}
           isRealData={!!item.sparklineUpdated || show10D}

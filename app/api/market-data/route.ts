@@ -1,6 +1,6 @@
 import { marketData as fallbackData } from "@/components/bloomberg/lib/marketData";
 import type { MarketData, MarketItem } from "@/components/bloomberg/types";
-import { generateRandomSparkline } from "@/lib/alpha-vantage";
+import { fetchAllMarketData, fetchBtcUsdQuote, generateRandomSparkline } from "@/lib/alpha-vantage";
 import refreshMarketData from "@/lib/market-data-refresh";
 import { redis } from "@/lib/redis";
 import { NextResponse } from "next/server";
@@ -12,6 +12,11 @@ import "@/lib/market-data-refresh";
 // Store year start values for YTD calculations
 const yearStartValues: Record<string, number> = {};
 let inMemoryMarketData: MarketData | null = null;
+let inMemoryApiCacheAt = 0;
+const API_CACHE_TTL_MS = 60 * 1000;
+const BTC_CACHE_TTL_MS = 15 * 1000;
+let cachedBtcPrice: number | null = null;
+let cachedBtcPriceAt = 0;
 
 // Sparkline update interval (5 minutes in milliseconds)
 const SPARKLINE_UPDATE_INTERVAL = 5 * 60 * 1000;
@@ -86,6 +91,19 @@ async function generateRandomUpdates(data: MarketData) {
         if (key === "americas" || key === "emea" || key === "asiaPacific") {
           acc[key] = data[key].map((item: MarketItem) => {
             try {
+              // BTC is handled separately using live crypto quote, so avoid random walk drift.
+              if (item.id === "BTC") {
+                return {
+                  ...item,
+                  time: new Date().toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  }),
+                  lastUpdated: new Date().toISOString(),
+                };
+              }
+
               // Get region factor
               const regionFactor = regionFactors[key as keyof typeof regionFactors];
 
@@ -258,6 +276,44 @@ function getEnhancedFallbackData() {
   );
 }
 
+async function getLiveBtcPrice() {
+  const now = Date.now();
+  if (cachedBtcPrice && now - cachedBtcPriceAt < BTC_CACHE_TTL_MS) {
+    return cachedBtcPrice;
+  }
+
+  const freshPrice = await fetchBtcUsdQuote();
+  if (typeof freshPrice === "number" && Number.isFinite(freshPrice)) {
+    cachedBtcPrice = freshPrice;
+    cachedBtcPriceAt = now;
+    return freshPrice;
+  }
+
+  return null;
+}
+
+async function applyLiveBtcPrice(data: MarketData) {
+  const liveBtc = await getLiveBtcPrice();
+  if (!liveBtc || !Array.isArray(data.americas)) return data;
+
+  const btcIndex = data.americas.findIndex((item) => item.id === "BTC");
+  if (btcIndex === -1) return data;
+
+  const currentItem = data.americas[btcIndex];
+  data.americas[btcIndex] = {
+    ...currentItem,
+    value: Number.parseFloat(liveBtc.toFixed(2)),
+    time: new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
+    lastUpdated: new Date().toISOString(),
+  };
+
+  return data;
+}
+
 export async function GET() {
   try {
     // Check if Redis is connected
@@ -276,34 +332,58 @@ export async function GET() {
     }
 
     if (!isConnected || !redisData) {
-      console.log("Using fallback data");
+      const now = Date.now();
+      const hasFreshApiCache = inMemoryMarketData && now - inMemoryApiCacheAt < API_CACHE_TTL_MS;
+
+      // Prefer live API fetch when Redis is unavailable; fallback only if API fails.
+      if (!hasFreshApiCache) {
+        try {
+          const apiData = await fetchAllMarketData();
+          inMemoryMarketData = {
+            ...apiData,
+            lastUpdated: new Date().toISOString(),
+          } as MarketData;
+          inMemoryApiCacheAt = now;
+        } catch (apiError) {
+          console.warn("Alpha Vantage fetch failed in fallback mode:", apiError);
+        }
+      }
+
       const baseData = inMemoryMarketData || getEnhancedFallbackData();
-      const updatedFallbackData = await generateRandomUpdates(baseData);
-      inMemoryMarketData = updatedFallbackData;
+      const updatedData = await generateRandomUpdates(baseData);
+      const liveBtcUpdatedData = await applyLiveBtcPrice(updatedData);
+      inMemoryMarketData = liveBtcUpdatedData;
 
       // Initialize year start values
-      initializeYearStartValues(updatedFallbackData);
+      initializeYearStartValues(liveBtcUpdatedData);
 
       return NextResponse.json({
-        ...updatedFallbackData,
+        ...liveBtcUpdatedData,
         isFromRedis: false,
+        fromRedis: false,
+        dataSource: liveBtcUpdatedData.dataSource || "fallback",
+        source: liveBtcUpdatedData.dataSource || "fallback",
         lastUpdated: new Date().toISOString(),
       });
     }
 
     // Advance Redis-backed data on each fetch so LIVE polling produces new ticks
     const updatedRedisData = await generateRandomUpdates(redisData as MarketData);
-    updatedRedisData.lastUpdated = new Date().toISOString();
+    const liveBtcUpdatedRedisData = await applyLiveBtcPrice(updatedRedisData);
+    liveBtcUpdatedRedisData.lastUpdated = new Date().toISOString();
 
     try {
-      await redis.set("market_data", updatedRedisData, { ex: 3600 });
+      await redis.set("market_data", liveBtcUpdatedRedisData, { ex: 3600 });
     } catch (redisSetError) {
       console.warn("Error storing updated Redis market data:", redisSetError);
     }
 
     return NextResponse.json({
-      ...updatedRedisData,
+      ...liveBtcUpdatedRedisData,
       isFromRedis: true,
+      fromRedis: true,
+      dataSource: liveBtcUpdatedRedisData.dataSource || "redis",
+      source: liveBtcUpdatedRedisData.dataSource || "redis",
       lastFetched: new Date().toISOString(),
     });
   } catch (error) {
@@ -317,6 +397,9 @@ export async function GET() {
     return NextResponse.json({
       ...enhancedFallbackData,
       isFromRedis: false,
+      fromRedis: false,
+      dataSource: "fallback",
+      source: "fallback",
       error: String(error),
       lastUpdated: new Date().toISOString(),
     });

@@ -54,7 +54,7 @@ export function Sparkline({
 
       ctx.beginPath();
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.2;
 
       data.forEach((value, i) => {
         const x = startX + i * xScale;
