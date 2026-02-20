@@ -34,6 +34,7 @@ export function MarketSection({
   const [showFutures] = useAtom(showFuturesAtom);
 
   const colors = isDarkMode ? bloombergColors.dark : bloombergColors.light;
+  const sectionHeaderBg = isDarkMode ? colors.background : "transparent";
   const fixedColumnClass = "w-[140px] sm:w-[170px] whitespace-nowrap overflow-hidden text-ellipsis";
   // Apply section-level filters
   let filteredItems = [...items];
@@ -92,12 +93,13 @@ export function MarketSection({
   if (filteredItems.length === 0) {
     return (
       <>
-        <TableRow className={`bg-[${colors.surface}]`}>
+        <TableRow>
           <TableCell
             className={cn(
-              `sticky left-0 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
+              "sticky left-0 z-10 px-3 py-2 text-left text-sm font-bold",
               fixedColumnClass
             )}
+            style={{ backgroundColor: sectionHeaderBg }}
             colSpan={1}
           >
             {sectionNum} {title}
@@ -117,12 +119,13 @@ export function MarketSection({
 
   return (
     <>
-      <TableRow className={`bg-[${colors.surface}]`}>
+      <TableRow>
         <TableCell
           className={cn(
-              `sticky left-0 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
+              "sticky left-0 z-10 px-3 py-2 text-left text-sm font-bold",
               fixedColumnClass
             )}
+          style={{ backgroundColor: sectionHeaderBg }}
           colSpan={1}
         >
           {sectionNum} {title}

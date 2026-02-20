@@ -22,7 +22,7 @@ export function TerminalFilterBar({ isDarkMode, watchlists }: TerminalFilterBarP
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 bg-[${colors.surface}] px-2 py-1 text-[${colors.accent}] text-xs sm:text-sm`}
+      className={`relative z-30 flex flex-wrap items-center gap-3 bg-[${colors.surface}] px-2 py-1 text-[${colors.accent}] text-xs sm:text-sm`}
     >
       <span className="text-[11px] tracking-wider text-orange-300">WATCHLIST</span>
       <DropdownMenu>

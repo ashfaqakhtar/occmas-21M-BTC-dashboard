@@ -24,7 +24,7 @@ export function TerminalHeader({ isDarkMode, onThemeToggle }: TerminalHeaderProp
   const colors = isDarkMode ? bloombergColors.dark : bloombergColors.light;
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 bg-[${colors.surface}] px-2 py-1`}>
+    <div className={`relative z-30 flex flex-wrap items-center gap-2 bg-[${colors.surface}] px-2 py-1`}>
       <div className="flex items-center gap-2">
         <span className="text-[20px] text-orange-400 tracking-widest">21M</span>
         <span className="text-xl font-bold">INTERNAL MARKET TERMINAL</span>

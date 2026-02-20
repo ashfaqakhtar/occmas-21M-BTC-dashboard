@@ -30,7 +30,7 @@ export function MarketView({ isDarkMode }: MarketViewProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="relative z-0 overflow-x-auto">
       <MarketTable data={data} isDarkMode={isDarkMode} />
     </div>
   );

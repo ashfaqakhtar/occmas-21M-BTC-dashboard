@@ -55,14 +55,15 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
   }
 
   return (
-    <Table className="w-full border-separate border-spacing-0 text-sm">
+    <Table className="w-full min-w-[980px] border-separate border-spacing-0 text-sm">
       <TableHeader>
         <TableRow className={`bg-[${colors.surface}]`}>
           <TableHead
             className={cn(
-              `sticky left-0 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
+              `sticky left-0 z-20 bg-[${colors.surface}] px-3 py-2 text-left text-sm font-bold`,
               fixedColumnClass
             )}
+            style={{ backgroundColor: colors.surface }}
           >
             Market
           </TableHead>

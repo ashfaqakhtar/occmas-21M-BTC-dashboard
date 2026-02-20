@@ -77,7 +77,8 @@ export function MarketRow({
   return (
     <TableRow className={`border-b border-[${colors.border}]`}>
       <TableCell
-        className={cn(`sticky left-0 bg-[${colors.background}] px-3 py-2`, fixedColumnClass)}
+        className={cn(`sticky left-0 z-10 bg-[${colors.background}] px-3 py-2`, fixedColumnClass)}
+        style={{ backgroundColor: colors.background }}
       >
         <div className="flex items-center gap-2">
           <span className={`text-[${colors.textSecondary}] text-sm`}>{item.num}</span>
