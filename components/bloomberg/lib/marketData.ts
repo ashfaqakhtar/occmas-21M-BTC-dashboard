@@ -1,9 +1,13 @@
-export const marketData = {
+import type { MarketData } from "../types";
+
+export const marketData: MarketData = {
   americas: [
     {
       id: "BTC",
       num: "11)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Crypto price",
+      sourceSymbol: "BTCUSDT",
       value: 63874.21,
       change: 741.38,
       pctChange: 1.17,
@@ -15,7 +19,9 @@ export const marketData = {
     {
       id: "IBIT",
       num: "12)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "ETF price",
+      sourceSymbol: "IBIT",
       value: 63.75,
       change: 0.64,
       pctChange: 1.01,
@@ -27,7 +33,9 @@ export const marketData = {
     {
       id: "MSTR",
       num: "13)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "MSTR",
       value: 1342.4,
       change: 28.15,
       pctChange: 2.14,
@@ -39,7 +47,9 @@ export const marketData = {
     {
       id: "MARA",
       num: "14)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "MARA",
       value: 19.82,
       change: 0.44,
       pctChange: 2.27,
@@ -51,7 +61,9 @@ export const marketData = {
     {
       id: "RIOT",
       num: "15)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "RIOT",
       value: 11.53,
       change: 0.19,
       pctChange: 1.68,
@@ -63,7 +75,9 @@ export const marketData = {
     {
       id: "CLSK",
       num: "16)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "CLSK",
       value: 16.27,
       change: 0.37,
       pctChange: 2.33,
@@ -75,7 +89,9 @@ export const marketData = {
     {
       id: "HUT",
       num: "17)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "HUT",
       value: 11.44,
       change: 0.26,
       pctChange: 2.33,
@@ -87,7 +103,9 @@ export const marketData = {
     {
       id: "IREN",
       num: "18)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "IREN",
       value: 8.31,
       change: 0.15,
       pctChange: 1.84,
@@ -99,7 +117,9 @@ export const marketData = {
     {
       id: "CORZ",
       num: "19)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Stock price",
+      sourceSymbol: "CORZ",
       value: 13.89,
       change: 0.35,
       pctChange: 2.59,
@@ -113,7 +133,9 @@ export const marketData = {
     {
       id: "SPX",
       num: "21)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Index level",
+      sourceSymbol: "^GSPC",
       value: 5157.32,
       change: 24.17,
       pctChange: 0.47,
@@ -125,7 +147,9 @@ export const marketData = {
     {
       id: "NDX",
       num: "22)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Index level",
+      sourceSymbol: "^NDX",
       value: 18290.21,
       change: 132.74,
       pctChange: 0.73,
@@ -137,7 +161,9 @@ export const marketData = {
     {
       id: "DXY",
       num: "23)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Forex pair",
+      sourceSymbol: "DX-Y.NYB",
       value: 104.11,
       change: 0.22,
       pctChange: 0.21,
@@ -149,9 +175,11 @@ export const marketData = {
   ],
   asiaPacific: [
     {
-      id: "US 2Y (SHY)",
+      id: "SHY",
       num: "31)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "ETF price",
+      sourceSymbol: "SHY",
       value: 81.44,
       change: -0.06,
       pctChange: -0.07,
@@ -161,9 +189,11 @@ export const marketData = {
       ytdCur: -0.42,
     },
     {
-      id: "US 10Y (IEF)",
+      id: "IEF",
       num: "32)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "ETF price",
+      sourceSymbol: "IEF",
       value: 94.16,
       change: -0.18,
       pctChange: -0.19,
@@ -175,7 +205,9 @@ export const marketData = {
     {
       id: "GOLD",
       num: "33)",
-      rmi: "â–¡",
+      rmi: "RMI",
+      instrumentType: "Commodity price",
+      sourceSymbol: "XAUUSD=X",
       value: 2340.83,
       change: 11.42,
       pctChange: 0.49,
@@ -183,6 +215,20 @@ export const marketData = {
       time: "10:46",
       ytd: 9.57,
       ytdCur: 9.57,
+    },
+    {
+      id: "SILVER",
+      num: "34)",
+      rmi: "RMI",
+      instrumentType: "Commodity price",
+      sourceSymbol: "XAGUSD=X",
+      value: 30.12,
+      change: 0.21,
+      pctChange: 0.7,
+      avat: 1.91,
+      time: "10:46",
+      ytd: 12.34,
+      ytdCur: 12.34,
     },
   ],
 };

@@ -69,8 +69,8 @@ export const defaultWatchlists: Array<{ name: string; indices: string[] }> = [
   },
   { name: "SPX / NDX", indices: ["SPX", "NDX"] },
   { name: "DXY", indices: ["DXY"] },
-  { name: "2Y / 10Y Proxies", indices: ["US 2Y (SHY)", "US 10Y (IEF)"] },
-  { name: "Gold", indices: ["GOLD"] },
+  { name: "Treasury ETFs", indices: ["SHY", "IEF"] },
+  { name: "Gold / Silver", indices: ["GOLD", "SILVER"] },
 ];
 
 // Watchlist state atoms

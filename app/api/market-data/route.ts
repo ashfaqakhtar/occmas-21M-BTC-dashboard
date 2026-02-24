@@ -250,6 +250,8 @@ function getEnhancedFallbackData() {
           id: item.id || `item-${Math.random().toString(36).substring(2, 9)}`,
           num: item.num || "",
           rmi: item.rmi || "",
+          instrumentType: item.instrumentType,
+          sourceSymbol: item.sourceSymbol,
           value: item.value || 0,
           change: item.change || 0,
           pctChange: item.pctChange || 0,
@@ -316,6 +318,23 @@ async function applyLiveBtcPrice(data: MarketData) {
 
 export async function GET() {
   try {
+    const now = Date.now();
+    const hasFreshApiCache = inMemoryMarketData && now - inMemoryApiCacheAt < API_CACHE_TTL_MS;
+
+    // Keep a short-lived live cache from upstream quotes for all non-BTC rows.
+    if (!hasFreshApiCache) {
+      try {
+        const apiData = await fetchAllMarketData();
+        inMemoryMarketData = {
+          ...apiData,
+          lastUpdated: new Date().toISOString(),
+        } as MarketData;
+        inMemoryApiCacheAt = now;
+      } catch (apiError) {
+        console.warn("Live market fetch failed, using cache/Redis fallback:", apiError);
+      }
+    }
+
     // Check if Redis is connected
     let isConnected = false;
     let redisData = null;
@@ -331,59 +350,31 @@ export async function GET() {
       isConnected = false;
     }
 
-    if (!isConnected || !redisData) {
-      const now = Date.now();
-      const hasFreshApiCache = inMemoryMarketData && now - inMemoryApiCacheAt < API_CACHE_TTL_MS;
+    const usingLiveCache = Boolean(inMemoryMarketData);
+    const servedFromRedis = !usingLiveCache && Boolean(redisData);
+    const baseData = (inMemoryMarketData || (redisData as MarketData) || getEnhancedFallbackData()) as MarketData;
+    const liveBtcUpdatedData = await applyLiveBtcPrice(baseData);
+    liveBtcUpdatedData.lastUpdated = new Date().toISOString();
+    inMemoryMarketData = liveBtcUpdatedData;
 
-      // Prefer live API fetch when Redis is unavailable; fallback only if API fails.
-      if (!hasFreshApiCache) {
-        try {
-          const apiData = await fetchAllMarketData();
-          inMemoryMarketData = {
-            ...apiData,
-            lastUpdated: new Date().toISOString(),
-          } as MarketData;
-          inMemoryApiCacheAt = now;
-        } catch (apiError) {
-          console.warn("Alpha Vantage fetch failed in fallback mode:", apiError);
-        }
+    // Keep Redis warm with latest snapshot if available.
+    if (isConnected) {
+      try {
+        await redis.set("market_data", liveBtcUpdatedData, { ex: 3600 });
+      } catch (redisSetError) {
+        console.warn("Error storing updated Redis market data:", redisSetError);
       }
-
-      const baseData = inMemoryMarketData || getEnhancedFallbackData();
-      const updatedData = await generateRandomUpdates(baseData);
-      const liveBtcUpdatedData = await applyLiveBtcPrice(updatedData);
-      inMemoryMarketData = liveBtcUpdatedData;
-
-      // Initialize year start values
-      initializeYearStartValues(liveBtcUpdatedData);
-
-      return NextResponse.json({
-        ...liveBtcUpdatedData,
-        isFromRedis: false,
-        fromRedis: false,
-        dataSource: liveBtcUpdatedData.dataSource || "fallback",
-        source: liveBtcUpdatedData.dataSource || "fallback",
-        lastUpdated: new Date().toISOString(),
-      });
     }
 
-    // Advance Redis-backed data on each fetch so LIVE polling produces new ticks
-    const updatedRedisData = await generateRandomUpdates(redisData as MarketData);
-    const liveBtcUpdatedRedisData = await applyLiveBtcPrice(updatedRedisData);
-    liveBtcUpdatedRedisData.lastUpdated = new Date().toISOString();
-
-    try {
-      await redis.set("market_data", liveBtcUpdatedRedisData, { ex: 3600 });
-    } catch (redisSetError) {
-      console.warn("Error storing updated Redis market data:", redisSetError);
-    }
+    // Initialize year start values for any views that still read this field.
+    initializeYearStartValues(liveBtcUpdatedData);
 
     return NextResponse.json({
-      ...liveBtcUpdatedRedisData,
-      isFromRedis: true,
-      fromRedis: true,
-      dataSource: liveBtcUpdatedRedisData.dataSource || "redis",
-      source: liveBtcUpdatedRedisData.dataSource || "redis",
+      ...liveBtcUpdatedData,
+      isFromRedis: servedFromRedis,
+      fromRedis: servedFromRedis,
+      dataSource: liveBtcUpdatedData.dataSource || (servedFromRedis ? "redis" : "fallback"),
+      source: liveBtcUpdatedData.dataSource || (servedFromRedis ? "redis" : "fallback"),
       lastFetched: new Date().toISOString(),
     });
   } catch (error) {
@@ -427,13 +418,21 @@ export async function POST(request: Request) {
         isConnected = false;
       }
 
-      // If Redis is not connected or no data, use fallback
-      if (!isConnected || !currentData) {
-        currentData = inMemoryMarketData || getEnhancedFallbackData();
+      // Manual refresh should fetch fresh upstream quotes instead of randomizing values.
+      let updatedData: MarketData;
+      try {
+        const freshData = await fetchAllMarketData();
+        updatedData = {
+          ...freshData,
+          lastUpdated: new Date().toISOString(),
+        } as MarketData;
+      } catch (apiError) {
+        console.warn("Manual refresh live fetch failed, using cached data:", apiError);
+        updatedData = (currentData || inMemoryMarketData || getEnhancedFallbackData()) as MarketData;
       }
 
-      // Generate random updates
-      const updatedData = await generateRandomUpdates(currentData);
+      // Keep BTC anchored to live spot if available.
+      updatedData = await applyLiveBtcPrice(updatedData);
 
       // Add timestamp
       updatedData.lastUpdated = new Date().toISOString();

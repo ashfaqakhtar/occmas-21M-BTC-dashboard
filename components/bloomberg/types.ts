@@ -1,8 +1,19 @@
+export type InstrumentType =
+  | "Crypto price"
+  | "Stock price"
+  | "ETF price"
+  | "Index level"
+  | "Yield"
+  | "Commodity price"
+  | "Forex pair";
+
 // Define proper types for market data
 export type MarketItem = {
   id: string;
   num?: string;
   rmi?: string;
+  instrumentType?: InstrumentType;
+  sourceSymbol?: string;
   value: number;
   change: number;
   pctChange: number;

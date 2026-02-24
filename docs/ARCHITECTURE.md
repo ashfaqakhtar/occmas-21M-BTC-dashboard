@@ -40,7 +40,7 @@ Core instruments are grouped for monitoring:
 
 - Bitcoin/Bitcoin equities: BTC, MSTR, MARA, RIOT, CLSK, HUT, IREN, CORZ
 - Equity and dollar: SPX, NDX, DXY
-- Rates and commodity proxies: US 2Y (SHY), US 10Y (IEF), GOLD
+- Rates and commodity proxies: SHY, IEF, GOLD, SILVER
 
 Watchlists are preconfigured to match requested operational views.
 
