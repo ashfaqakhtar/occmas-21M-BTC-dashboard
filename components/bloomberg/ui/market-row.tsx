@@ -204,18 +204,11 @@ import { useAtom } from "jotai";
 import { SparklineCell } from ".";
 import {
   currentViewAtom,
-  filtersAtom,
   rmiBenchmarkIndexAtom,
   rmiSelectedRegionAtom,
   rmiSelectedSecurityAtom,
-  show10DAtom,
   showAvatAtom,
   showCADAtom,
-  showFuturesAtom,
-  showMoversAtom,
-  showRatiosAtom,
-  showVolatilityAtom,
-  showYTDAtom,
 } from "../atoms";
 
 import { convertToCAD, formatCurrency, formatNumber } from "../lib/currency-utils";
@@ -237,9 +230,7 @@ export function MarketRow({
   updatedCells,
   updatedSparklines,
 }: MarketRowProps) {
-  const [filters] = useAtom(filtersAtom);
   const [showCAD] = useAtom(showCADAtom);
-  const [showYTD] = useAtom(showYTDAtom);
   const [showAvat] = useAtom(showAvatAtom);
 
   const [, setCurrentView] = useAtom(currentViewAtom);
@@ -284,6 +275,11 @@ export function MarketRow({
           <span className={`text-[${colors.accent}] text-sm font-medium`}>
             {item.id}
           </span>
+          {item.isFallback ? (
+            <span className="rounded border border-yellow-600 px-1 text-[10px] leading-4 text-yellow-400" title="Fallback value (provider unavailable)">
+              FB
+            </span>
+          ) : null}
         </div>
       </TableCell>
 
@@ -325,24 +321,16 @@ export function MarketRow({
         )}
       </TableCell>
 
-      {/* CHANGE / YTD */}
+      {/* NET CHANGE (absolute) */}
       <TableCell
         className={cn(
           "px-3 py-2 text-right text-sm",
-          showYTD
-            ? item.ytd >= 0
-              ? `text-[${colors.positive}]`
-              : `text-[${colors.negative}]`
-            : item.change >= 0
+          item.change >= 0
             ? `text-[${colors.positive}]`
             : `text-[${colors.negative}]`
         )}
       >
-        {showYTD ? (
-          `${item.ytd >= 0 ? "+" : ""}${formatNumber(item.ytd)}%`
-        ) : (
-          `${item.change >= 0 ? "+" : ""}${formatNumber(item.change)}`
-        )}
+        {`${item.change >= 0 ? "+" : ""}${formatNumber(item.change)}`}
       </TableCell>
 
       {/* % CHANGE */}

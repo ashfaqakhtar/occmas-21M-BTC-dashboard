@@ -81,22 +81,26 @@ export function useMarketDataQuery() {
       )
         continue;
 
-      for (const [index, oldItem] of (oldData[region] as MarketItem[]).entries()) {
-        const newItem = newData[region]?.[index];
-        if (newItem && oldItem) {
-          // Check all fields for changes
-          const fieldsToCheck = ["value", "change", "pctChange", "avat", "time", "ytd", "ytdCur"];
+      const oldItems = oldData[region] as MarketItem[];
+      const newItems = newData[region] as MarketItem[];
+      const newItemById = new Map(newItems.map((item) => [item.id, item]));
 
-          for (const field of fieldsToCheck) {
-            if (oldItem[field as keyof MarketItem] !== newItem[field as keyof MarketItem]) {
-              newUpdatedCells[`${region}-${newItem.id}-${field}`] = true;
-            }
-          }
+      for (const oldItem of oldItems) {
+        const newItem = newItemById.get(oldItem.id);
+        if (!newItem) continue;
 
-          // Check if sparkline data has changed
-          if (JSON.stringify(oldItem.sparkline1) !== JSON.stringify(newItem.sparkline1)) {
-            newUpdatedSparklines[`${region}-${newItem.id}`] = true;
+        // Check all fields for changes
+        const fieldsToCheck = ["value", "change", "pctChange", "avat", "time", "ytd", "ytdCur"];
+
+        for (const field of fieldsToCheck) {
+          if (oldItem[field as keyof MarketItem] !== newItem[field as keyof MarketItem]) {
+            newUpdatedCells[`${region}-${newItem.id}-${field}`] = true;
           }
+        }
+
+        // Check if sparkline data has changed
+        if (JSON.stringify(oldItem.sparkline1) !== JSON.stringify(newItem.sparkline1)) {
+          newUpdatedSparklines[`${region}-${newItem.id}`] = true;
         }
       }
     }

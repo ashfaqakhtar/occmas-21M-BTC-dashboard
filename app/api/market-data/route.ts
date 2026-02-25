@@ -20,6 +20,7 @@ let cachedBtcPriceAt = 0;
 
 // Sparkline update interval (5 minutes in milliseconds)
 const SPARKLINE_UPDATE_INTERVAL = 5 * 60 * 1000;
+type MarketItemWithFallback = MarketItem & { isFallback?: boolean };
 
 // Initialize year start values if not already set
 function initializeYearStartValues(data: MarketData) {
@@ -278,17 +279,64 @@ function getEnhancedFallbackData() {
   );
 }
 
+function mergeWithPreviousIfFallback(
+  incoming: MarketData,
+  previous: MarketData | null
+): MarketData {
+  if (!previous) return incoming;
+
+  const regions: Array<keyof Pick<MarketData, "americas" | "emea" | "asiaPacific">> = [
+    "americas",
+    "emea",
+    "asiaPacific",
+  ];
+
+  for (const region of regions) {
+    const prevById = new Map(
+      (previous[region] || []).map((item) => [item.id, item as MarketItemWithFallback])
+    );
+
+    incoming[region] = (incoming[region] || []).map((row) => {
+      const candidate = row as MarketItemWithFallback;
+      if (!candidate.isFallback) return row;
+
+      const prev = prevById.get(candidate.id);
+      if (!prev) return row;
+
+      const prevRow = prev as MarketItemWithFallback;
+      const carried: MarketItemWithFallback = {
+        ...prev,
+        time: candidate.time,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      if (Array.isArray(candidate.sparkline1)) carried.sparkline1 = candidate.sparkline1;
+      if (Array.isArray(candidate.sparkline2)) carried.sparkline2 = candidate.sparkline2;
+
+      // Keep metadata consistent with current row layout.
+      carried.num = candidate.num ?? prevRow.num;
+      carried.rmi = candidate.rmi ?? prevRow.rmi;
+      carried.instrumentType = candidate.instrumentType ?? prevRow.instrumentType;
+      carried.sourceSymbol = candidate.sourceSymbol ?? prevRow.sourceSymbol;
+      carried.isFallback = false;
+      return carried as MarketItem;
+    });
+  }
+
+  return incoming;
+}
+
 async function getLiveBtcPrice() {
   const now = Date.now();
   if (cachedBtcPrice && now - cachedBtcPriceAt < BTC_CACHE_TTL_MS) {
     return cachedBtcPrice;
   }
 
-  const freshPrice = await fetchBtcUsdQuote();
-  if (typeof freshPrice === "number" && Number.isFinite(freshPrice)) {
-    cachedBtcPrice = freshPrice;
+  const freshQuote = await fetchBtcUsdQuote();
+  if (freshQuote && Number.isFinite(freshQuote.price)) {
+    cachedBtcPrice = freshQuote.price;
     cachedBtcPriceAt = now;
-    return freshPrice;
+    return freshQuote.price;
   }
 
   return null;
@@ -325,8 +373,10 @@ export async function GET() {
     if (!hasFreshApiCache) {
       try {
         const apiData = await fetchAllMarketData();
+        const previousSnapshot = (inMemoryMarketData || null) as MarketData | null;
+        const mergedData = mergeWithPreviousIfFallback(apiData as MarketData, previousSnapshot);
         inMemoryMarketData = {
-          ...apiData,
+          ...mergedData,
           lastUpdated: new Date().toISOString(),
         } as MarketData;
         inMemoryApiCacheAt = now;
@@ -422,8 +472,10 @@ export async function POST(request: Request) {
       let updatedData: MarketData;
       try {
         const freshData = await fetchAllMarketData();
+        const previousSnapshot = (currentData || inMemoryMarketData || null) as MarketData | null;
+        const mergedData = mergeWithPreviousIfFallback(freshData as MarketData, previousSnapshot);
         updatedData = {
-          ...freshData,
+          ...mergedData,
           lastUpdated: new Date().toISOString(),
         } as MarketData;
       } catch (apiError) {

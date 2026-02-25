@@ -14,6 +14,7 @@ export type MarketItem = {
   rmi?: string;
   instrumentType?: InstrumentType;
   sourceSymbol?: string;
+  isFallback?: boolean;
   value: number;
   change: number;
   pctChange: number;
