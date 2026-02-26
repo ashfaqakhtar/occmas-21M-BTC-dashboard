@@ -57,7 +57,7 @@ export function MarketSection({
     filteredItems = filteredItems.filter(
       (item) =>
         // Consider major indices as ratio items for demonstration purposes
-        ["S&P", "DOW", "NASDAQ", "FTSE"].some((term) => item.id.includes(term)) ||
+        ["VIX", "TNX", "MOVE", "DJI", "RUT", "NYA", "NIKKEI225", "NIFTY50", "FTSE100"].includes(item.id) ||
         // Items with specific P/E ratio characteristics (using ytd as a proxy)
         Math.abs(item.ytd) > 10.0
     );
@@ -69,7 +69,7 @@ export function MarketSection({
     filteredItems = filteredItems.filter(
       (item) =>
         // Consider these specific indices as futures-related for demonstration
-        ["DAX", "CAC", "IBEX", "NIKKEI", "HANG SENG"].some((term) => item.id.includes(term)) ||
+        ["USOIL", "UKOIL", "NATGAS", "GOLD", "SILVER", "XPTUSD", "XPDUSD"].includes(item.id) ||
         // Items with specific characteristics (using avat as a proxy)
         Math.abs(item.avat) > 20.0
     );
@@ -145,3 +145,5 @@ export function MarketSection({
     </>
   );
 }
+
+

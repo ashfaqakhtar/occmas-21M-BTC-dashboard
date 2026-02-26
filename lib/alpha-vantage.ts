@@ -29,15 +29,31 @@ export const SYMBOL_MAP: Record<string, SymbolConfig> = {
   IREN: { symbol: "IREN", instrumentType: "Stock price", provider: "twelve" },
   CORZ: { symbol: "CORZ", instrumentType: "Stock price", provider: "twelve" },
 
-  SPX: { symbol: "SPX", instrumentType: "Index level", provider: "twelve" },
-  NDX: { symbol: "NDX", instrumentType: "Index level", provider: "twelve" },
-  DXY: { symbol: "DXY", instrumentType: "Forex pair", provider: "twelve" },
-
-  SHY: { symbol: "SHY", instrumentType: "ETF price", provider: "twelve" },
-  IEF: { symbol: "IEF", instrumentType: "ETF price", provider: "twelve" },
+  VIX: { symbol: "VIX", instrumentType: "Index level", provider: "twelve" },
+  TNX: { symbol: "TNX", instrumentType: "Yield", provider: "twelve" },
+  MOVE: { symbol: "MOVE", instrumentType: "Index level", provider: "twelve" },
+  DJI: { symbol: "DJI", instrumentType: "Index level", provider: "twelve" },
+  RUT: { symbol: "RUT", instrumentType: "Index level", provider: "twelve" },
+  NYA: { symbol: "NYA", instrumentType: "Index level", provider: "twelve" },
+  NIKKEI225: { symbol: "N225", instrumentType: "Index level", provider: "twelve" },
+  NIFTY50: { symbol: "NIFTY", instrumentType: "Index level", provider: "twelve" },
+  FTSE100: { symbol: "FTSE", instrumentType: "Index level", provider: "twelve" },
 
   GOLD: { symbol: "XAU/USD", instrumentType: "Commodity price", provider: "twelve" },
   SILVER: { symbol: "XAG/USD", instrumentType: "Commodity price", provider: "twelve" },
+  XPTUSD: { symbol: "XPT/USD", instrumentType: "Commodity price", provider: "twelve" },
+  XPDUSD: { symbol: "XPD/USD", instrumentType: "Commodity price", provider: "twelve" },
+  USOIL: { symbol: "USOIL", instrumentType: "Commodity price", provider: "twelve" },
+  UKOIL: { symbol: "UKOIL", instrumentType: "Commodity price", provider: "twelve" },
+  NATGAS: { symbol: "NATGAS", instrumentType: "Commodity price", provider: "twelve" },
+
+  AAPL: { symbol: "AAPL", instrumentType: "Stock price", provider: "twelve" },
+  MSFT: { symbol: "MSFT", instrumentType: "Stock price", provider: "twelve" },
+  NVDA: { symbol: "NVDA", instrumentType: "Stock price", provider: "twelve" },
+  AMZN: { symbol: "AMZN", instrumentType: "Stock price", provider: "twelve" },
+  GOOGL: { symbol: "GOOGL", instrumentType: "Stock price", provider: "twelve" },
+  META: { symbol: "META", instrumentType: "Stock price", provider: "twelve" },
+  TSLA: { symbol: "TSLA", instrumentType: "Stock price", provider: "twelve" },
 };
 
 const YAHOO_SYMBOL_MAP: Record<string, string> = {
@@ -49,19 +65,35 @@ const YAHOO_SYMBOL_MAP: Record<string, string> = {
   HUT: "HUT",
   IREN: "IREN",
   CORZ: "CORZ",
-  SPX: "^GSPC",
-  NDX: "^NDX",
-  DXY: "DX-Y.NYB",
-  SHY: "SHY",
-  IEF: "IEF",
+  VIX: "^VIX",
+  TNX: "^TNX",
+  MOVE: "^MOVE",
+  DJI: "^DJI",
+  RUT: "^RUT",
+  NYA: "^NYA",
+  NIKKEI225: "^N225",
+  NIFTY50: "^NSEI",
+  FTSE100: "^FTSE",
   GOLD: "GC=F",
   SILVER: "SI=F",
+  XPTUSD: "PL=F",
+  XPDUSD: "PA=F",
+  USOIL: "CL=F",
+  UKOIL: "BZ=F",
+  NATGAS: "NG=F",
+  AAPL: "AAPL",
+  MSFT: "MSFT",
+  NVDA: "NVDA",
+  AMZN: "AMZN",
+  GOOGL: "GOOGL",
+  META: "META",
+  TSLA: "TSLA",
 };
 
 const MARKET_REGIONS = {
   americas: ["BTC", "IBIT", "MSTR", "MARA", "RIOT", "CLSK", "HUT", "IREN", "CORZ"],
-  emea: ["SPX", "NDX", "DXY"],
-  asiaPacific: ["SHY", "IEF", "GOLD", "SILVER"],
+  emea: ["VIX", "TNX", "MOVE", "DJI", "RUT", "NYA", "NIKKEI225", "NIFTY50", "FTSE100"],
+  asiaPacific: ["GOLD", "SILVER", "XPTUSD", "XPDUSD", "USOIL", "UKOIL", "NATGAS", "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA"],
 } as const;
 
 type Quote = {
@@ -198,18 +230,19 @@ export async function fetchYahooQuotes(symbols: string[]): Promise<Record<string
 
 export async function fetchBtcUsdQuote(): Promise<Quote | null> {
   try {
-    const res = await fetch(
-      "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT",
-      { cache: "no-store" }
-    );
+    const [priceRes, statsRes] = await Promise.all([
+      fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", { cache: "no-store" }),
+      fetch("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT", { cache: "no-store" }),
+    ]);
 
-    if (!res.ok) return null;
+    if (!priceRes.ok || !statsRes.ok) return null;
 
-    const data = await res.json();
+    const priceData = await priceRes.json();
+    const statsData = await statsRes.json();
 
-    const price = safeNumber(data?.lastPrice);
-    const change = safeNumber(data?.priceChange);
-    const pctChange = safeNumber(data?.priceChangePercent);
+    const price = safeNumber(priceData?.price);
+    const change = safeNumber(statsData?.priceChange);
+    const pctChange = safeNumber(statsData?.priceChangePercent);
 
     if (!price) return null;
 
@@ -224,6 +257,8 @@ export async function fetchStooqMetalQuotes(): Promise<Record<string, Quote>> {
   const stooqById: Record<string, string> = {
     GOLD: "xauusd",
     SILVER: "xagusd",
+    XPTUSD: "xptusd",
+    XPDUSD: "xpdusd",
   };
 
   const map: Record<string, Quote> = {};
@@ -272,13 +307,29 @@ const FALLBACK_BASELINE: Record<string, number> = {
   HUT: 13,
   IREN: 10,
   CORZ: 15,
-  SPX: 5200,
-  NDX: 18600,
-  DXY: 104,
-  SHY: 82,
-  IEF: 95,
+  VIX: 15,
+  TNX: 42,
+  MOVE: 95,
+  DJI: 39000,
+  RUT: 2000,
+  NYA: 18000,
+  NIKKEI225: 38000,
+  NIFTY50: 22000,
+  FTSE100: 7800,
   GOLD: 2350,
   SILVER: 30,
+  XPTUSD: 980,
+  XPDUSD: 1050,
+  USOIL: 78,
+  UKOIL: 82,
+  NATGAS: 2.4,
+  AAPL: 190,
+  MSFT: 420,
+  NVDA: 900,
+  AMZN: 180,
+  GOOGL: 170,
+  META: 500,
+  TSLA: 210,
 };
 
 export function generateFallbackData(id: string, index: number) {
@@ -353,7 +404,7 @@ export async function fetchAllMarketData() {
           quote =
             twelveQuotes[config.symbol] ??
             (yahooSymbol ? yahooQuotes[yahooSymbol] : undefined) ??
-            (id === "GOLD" || id === "SILVER" ? stooqMetals[id] : undefined);
+            (["GOLD", "SILVER", "XPTUSD", "XPDUSD"].includes(id) ? stooqMetals[id] : undefined);
         }
 
         if (!quote?.price) {
@@ -403,3 +454,5 @@ export async function fetchFinancialNews(query = "market") {
     return null;
   }
 }
+
+

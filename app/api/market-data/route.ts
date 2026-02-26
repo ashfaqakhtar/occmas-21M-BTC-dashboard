@@ -14,8 +14,8 @@ const yearStartValues: Record<string, number> = {};
 let inMemoryMarketData: MarketData | null = null;
 let inMemoryApiCacheAt = 0;
 const API_CACHE_TTL_MS = 60 * 1000;
-const BTC_CACHE_TTL_MS = 15 * 1000;
-let cachedBtcPrice: number | null = null;
+const BTC_CACHE_TTL_MS = 2 * 1000;
+let cachedBtcQuote: { price: number; change: number; pctChange: number } | null = null;
 let cachedBtcPriceAt = 0;
 
 // Sparkline update interval (5 minutes in milliseconds)
@@ -328,15 +328,20 @@ function mergeWithPreviousIfFallback(
 
 async function getLiveBtcPrice() {
   const now = Date.now();
-  if (cachedBtcPrice && now - cachedBtcPriceAt < BTC_CACHE_TTL_MS) {
-    return cachedBtcPrice;
+  if (cachedBtcQuote && now - cachedBtcPriceAt < BTC_CACHE_TTL_MS) {
+    return cachedBtcQuote;
   }
 
   const freshQuote = await fetchBtcUsdQuote();
-  if (freshQuote && Number.isFinite(freshQuote.price)) {
-    cachedBtcPrice = freshQuote.price;
+  if (
+    freshQuote &&
+    Number.isFinite(freshQuote.price) &&
+    Number.isFinite(freshQuote.change) &&
+    Number.isFinite(freshQuote.pctChange)
+  ) {
+    cachedBtcQuote = freshQuote;
     cachedBtcPriceAt = now;
-    return freshQuote.price;
+    return freshQuote;
   }
 
   return null;
@@ -352,7 +357,9 @@ async function applyLiveBtcPrice(data: MarketData) {
   const currentItem = data.americas[btcIndex];
   data.americas[btcIndex] = {
     ...currentItem,
-    value: Number.parseFloat(liveBtc.toFixed(2)),
+    value: Number.parseFloat(liveBtc.price.toFixed(2)),
+    change: Number.parseFloat(liveBtc.change.toFixed(2)),
+    pctChange: Number.parseFloat(liveBtc.pctChange.toFixed(2)),
     time: new Date().toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
@@ -519,3 +526,4 @@ export async function POST(request: Request) {
     ); // Using 200 instead of 500 to prevent crashing the client
   }
 }
+

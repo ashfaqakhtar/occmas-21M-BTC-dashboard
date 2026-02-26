@@ -67,10 +67,9 @@ export const defaultWatchlists: Array<{ name: string; indices: string[] }> = [
     name: "MSTR + Major Miners",
     indices: ["MSTR", "MARA", "RIOT", "CLSK", "HUT", "IREN", "CORZ"],
   },
-  { name: "SPX / NDX", indices: ["SPX", "NDX"] },
-  { name: "DXY", indices: ["DXY"] },
-  { name: "Treasury ETFs", indices: ["SHY", "IEF"] },
-  { name: "Gold / Silver", indices: ["GOLD", "SILVER"] },
+  { name: "Index Basket", indices: ["VIX", "TNX", "MOVE", "DJI", "RUT", "NYA", "NIKKEI225", "NIFTY50", "FTSE100"] },
+  { name: "Commodities", indices: ["GOLD", "SILVER", "XPTUSD", "XPDUSD", "USOIL", "UKOIL", "NATGAS"] },
+  { name: "MAG 7", indices: ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA"] },
 ];
 
 // Watchlist state atoms
@@ -111,3 +110,5 @@ export const confirmAndCloseModalAtom = atom(
     set(isConfirmModalOpenAtom, false);
   }
 );
+
+

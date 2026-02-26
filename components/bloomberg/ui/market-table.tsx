@@ -13,7 +13,7 @@ import { showAvatAtom } from "../atoms";
 import { activeWatchlistAtom, watchlistsAtom } from "../atoms/terminal-ui";
 import { useMarketDataQuery } from "../hooks";
 import { bloombergColors, cn } from "../lib/theme-config";
-import type { MarketData } from "../types";
+import type { MarketData, MarketItem } from "../types";
 import { MarketSection } from ".";
 
 const fixedColumnClass = "w-[140px] sm:w-[170px] whitespace-nowrap overflow-hidden text-ellipsis";
@@ -54,6 +54,13 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
     );
   }
 
+    const commodityIds = new Set(["GOLD", "SILVER", "XPTUSD", "XPDUSD", "USOIL", "UKOIL", "NATGAS"]);
+  const mag7Ids = new Set(["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA"]);
+
+  const asiaItems = (filteredData.asiaPacific || []) as MarketItem[];
+  const commodityItems = asiaItems.filter((item) => commodityIds.has(item.id));
+  const mag7Items = asiaItems.filter((item) => mag7Ids.has(item.id));
+
   return (
     <Table className="w-full min-w-[980px] border-separate border-spacing-0 text-sm">
       <TableHeader>
@@ -93,7 +100,7 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
           updatedSparklines={updatedSparklines}
         />
         <MarketSection
-          title="Equity & Dollar"
+          title="Index"
           items={filteredData.emea || []}
           sectionNum="2)"
           regionKey="emea"
@@ -102,9 +109,18 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
           updatedSparklines={updatedSparklines}
         />
         <MarketSection
-          title="Rates & Gold"
-          items={filteredData.asiaPacific || []}
+          title="Commodities"
+          items={commodityItems}
           sectionNum="3)"
+          regionKey="asiaPacific"
+          isDarkMode={isDarkMode}
+          updatedCells={updatedCells}
+          updatedSparklines={updatedSparklines}
+        />
+        <MarketSection
+          title="MAG 7"
+          items={mag7Items}
+          sectionNum="4)"
           regionKey="asiaPacific"
           isDarkMode={isDarkMode}
           updatedCells={updatedCells}
@@ -114,3 +130,5 @@ export function MarketTable({ data, isDarkMode }: MarketTableProps) {
     </Table>
   );
 }
+
+
