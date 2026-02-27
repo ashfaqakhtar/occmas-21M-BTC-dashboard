@@ -366,6 +366,7 @@ async function applyLiveBtcPrice(data: MarketData) {
     value: Number.parseFloat(liveBtc.price.toFixed(2)),
     change: Number.parseFloat(liveBtc.change.toFixed(2)),
     pctChange: Number.parseFloat(liveBtc.pctChange.toFixed(2)),
+    isFallback: false,
     time: formatMarketTime(),
     lastUpdated: new Date().toISOString(),
   };

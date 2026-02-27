@@ -240,6 +240,7 @@ export async function fetchYahooQuotes(symbols: string[]): Promise<Record<string
 }
 
 export async function fetchBtcUsdQuote(): Promise<Quote | null> {
+  // Primary source: Binance
   try {
     const [priceRes, statsRes] = await Promise.all([
       fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", { cache: "no-store" }),
@@ -260,8 +261,42 @@ export async function fetchBtcUsdQuote(): Promise<Quote | null> {
     return { price, change, pctChange };
   } catch (err) {
     console.error("BTC error:", err);
-    return null;
   }
+
+  // Fallback source 1: Coinbase spot
+  try {
+    const res = await fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot", {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const price = safeNumber(data?.data?.amount);
+      if (price > 0) {
+        return { price, change: 0, pctChange: 0 };
+      }
+    }
+  } catch (err) {
+    console.error("BTC Coinbase fallback error:", err);
+  }
+
+  // Fallback source 2: CoinGecko
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+      { cache: "no-store" }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const price = safeNumber(data?.bitcoin?.usd);
+      if (price > 0) {
+        return { price, change: 0, pctChange: 0 };
+      }
+    }
+  } catch (err) {
+    console.error("BTC CoinGecko fallback error:", err);
+  }
+
+  return null;
 }
 
 export async function fetchStooqMetalQuotes(): Promise<Record<string, Quote>> {
