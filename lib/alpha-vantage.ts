@@ -240,6 +240,40 @@ export async function fetchYahooQuotes(symbols: string[]): Promise<Record<string
 }
 
 export async function fetchBtcUsdQuote(): Promise<Quote | null> {
+  // Primary source on server: Twelve Data (same provider used for most rows)
+  if (TWELVE_KEY) {
+    try {
+      const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent("BTC/USD")}&apikey=${TWELVE_KEY}`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (!(typeof data?.status === "string" && data.status.toLowerCase() === "error")) {
+          const price = optionalNumber(data?.close ?? data?.price);
+          const previousClose = optionalNumber(data?.previous_close ?? data?.previousClose);
+          const apiChange = optionalNumber(data?.change);
+          const apiPctChange = optionalNumber(data?.percent_change ?? data?.percentChange);
+          if (price && Number.isFinite(price)) {
+            const change =
+              apiChange !== undefined
+                ? apiChange
+                : previousClose !== undefined
+                  ? price - previousClose
+                  : 0;
+            const pctChange =
+              apiPctChange !== undefined
+                ? apiPctChange
+                : previousClose !== undefined
+                  ? calculatePctChange(price, previousClose)
+                  : 0;
+            return { price, change, pctChange };
+          }
+        }
+      }
+    } catch (err) {
+      console.error("BTC Twelve Data error:", err);
+    }
+  }
+
   // Primary source: Binance
   try {
     const [priceRes, statsRes] = await Promise.all([
