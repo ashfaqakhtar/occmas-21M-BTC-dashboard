@@ -281,7 +281,9 @@ export async function fetchBtcUsdQuote(): Promise<Quote | null> {
       fetch("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT", { cache: "no-store" }),
     ]);
 
-    if (!priceRes.ok || !statsRes.ok) return null;
+    if (!priceRes.ok || !statsRes.ok) {
+      throw new Error(`Binance unavailable: price=${priceRes.status}, stats=${statsRes.status}`);
+    }
 
     const priceData = await priceRes.json();
     const statsData = await statsRes.json();
@@ -290,7 +292,9 @@ export async function fetchBtcUsdQuote(): Promise<Quote | null> {
     const change = safeNumber(statsData?.priceChange);
     const pctChange = safeNumber(statsData?.priceChangePercent);
 
-    if (!price) return null;
+    if (!price) {
+      throw new Error("Binance returned invalid BTC price");
+    }
 
     return { price, change, pctChange };
   } catch (err) {
