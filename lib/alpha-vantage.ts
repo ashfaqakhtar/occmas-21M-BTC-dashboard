@@ -436,6 +436,16 @@ export async function fetchAllMarketData() {
     }
   }
 
+  const allItems = [...result.americas, ...result.emea, ...result.asiaPacific] as Array<{
+    isFallback?: boolean;
+  }>;
+  const fallbackCount = allItems.filter((item) => item.isFallback).length;
+  const totalCount = allItems.length;
+  const source =
+    fallbackCount === 0 ? "live" : fallbackCount === totalCount ? "fallback" : "mixed";
+  result.dataSource = source;
+  result.source = source;
+
   return result;
 }
 

@@ -13,6 +13,7 @@ import "@/lib/market-data-refresh";
 const yearStartValues: Record<string, number> = {};
 let inMemoryMarketData: MarketData | null = null;
 let inMemoryApiCacheAt = 0;
+let lastLiveSuccessAt: string | null = null;
 const API_CACHE_TTL_MS = 60 * 1000;
 const BTC_CACHE_TTL_MS = 2 * 1000;
 let cachedBtcQuote: { price: number; change: number; pctChange: number } | null = null;
@@ -318,7 +319,7 @@ function mergeWithPreviousIfFallback(
       carried.rmi = candidate.rmi ?? prevRow.rmi;
       carried.instrumentType = candidate.instrumentType ?? prevRow.instrumentType;
       carried.sourceSymbol = candidate.sourceSymbol ?? prevRow.sourceSymbol;
-      carried.isFallback = false;
+      carried.isFallback = true;
       return carried as MarketItem;
     });
   }
@@ -375,6 +376,7 @@ export async function GET() {
   try {
     const now = Date.now();
     const hasFreshApiCache = inMemoryMarketData && now - inMemoryApiCacheAt < API_CACHE_TTL_MS;
+    let fetchFailed = false;
 
     // Keep a short-lived live cache from upstream quotes for all non-BTC rows.
     if (!hasFreshApiCache) {
@@ -384,11 +386,16 @@ export async function GET() {
         const mergedData = mergeWithPreviousIfFallback(apiData as MarketData, previousSnapshot);
         inMemoryMarketData = {
           ...mergedData,
+          dataSource: ((apiData as MarketData).dataSource || "live") as string,
           lastUpdated: new Date().toISOString(),
         } as MarketData;
         inMemoryApiCacheAt = now;
+        if ((apiData as MarketData).dataSource !== "fallback") {
+          lastLiveSuccessAt = new Date().toISOString();
+        }
       } catch (apiError) {
         console.warn("Live market fetch failed, using cache/Redis fallback:", apiError);
+        fetchFailed = true;
       }
     }
 
@@ -432,6 +439,8 @@ export async function GET() {
       fromRedis: servedFromRedis,
       dataSource: liveBtcUpdatedData.dataSource || (servedFromRedis ? "redis" : "fallback"),
       source: liveBtcUpdatedData.dataSource || (servedFromRedis ? "redis" : "fallback"),
+      isStale: fetchFailed || (liveBtcUpdatedData.dataSource ?? "").toLowerCase() === "fallback",
+      lastLiveSuccessAt,
       lastFetched: new Date().toISOString(),
     });
   } catch (error) {
@@ -483,8 +492,12 @@ export async function POST(request: Request) {
         const mergedData = mergeWithPreviousIfFallback(freshData as MarketData, previousSnapshot);
         updatedData = {
           ...mergedData,
+          dataSource: ((freshData as MarketData).dataSource || "live") as string,
           lastUpdated: new Date().toISOString(),
         } as MarketData;
+        if ((freshData as MarketData).dataSource !== "fallback") {
+          lastLiveSuccessAt = new Date().toISOString();
+        }
       } catch (apiError) {
         console.warn("Manual refresh live fetch failed, using cached data:", apiError);
         updatedData = (currentData || inMemoryMarketData || getEnhancedFallbackData()) as MarketData;
