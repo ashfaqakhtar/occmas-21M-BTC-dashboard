@@ -1,6 +1,17 @@
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const TWELVE_KEY = process.env.TWELVE_DATA_API_KEY;
 const BASE_URL = "https://www.alphavantage.co/query";
+const DISPLAY_TIMEZONE = process.env.MARKET_TIMEZONE || "Asia/Kolkata";
+
+function formatMarketTime(date = new Date()) {
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZone: DISPLAY_TIMEZONE,
+  });
+}
 
 export type InstrumentType =
   | "Crypto price"
@@ -349,7 +360,7 @@ export function generateFallbackData(id: string, index: number) {
     change,
     pctChange,
     avat: pctChange * 0.3,
-    time: new Date().toLocaleTimeString(),
+    time: formatMarketTime(),
     ytd: pctChange * 6,
     ytdCur: pctChange * 5,
     sparkline1: generateRandomSparkline(),
@@ -420,7 +431,7 @@ export async function fetchAllMarketData() {
           change: quote.change,
           pctChange: quote.pctChange,
           avat: quote.pctChange * 0.3,
-          time: new Date().toLocaleTimeString(),
+          time: formatMarketTime(),
           ytd: quote.pctChange * 6,
           ytdCur: quote.pctChange * 5,
           sparkline1: generateRandomSparkline(),

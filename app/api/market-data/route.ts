@@ -4,6 +4,8 @@ import { fetchAllMarketData, fetchBtcUsdQuote, generateRandomSparkline } from "@
 import refreshMarketData from "@/lib/market-data-refresh";
 import { redis } from "@/lib/redis";
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // Initialize the market data refresh scheduler
 // This is imported here so it starts when the API route is first loaded
@@ -18,10 +20,29 @@ const API_CACHE_TTL_MS = 60 * 1000;
 const BTC_CACHE_TTL_MS = 2 * 1000;
 let cachedBtcQuote: { price: number; change: number; pctChange: number } | null = null;
 let cachedBtcPriceAt = 0;
+const DISPLAY_TIMEZONE = process.env.MARKET_TIMEZONE || "Asia/Kolkata";
 
 // Sparkline update interval (5 minutes in milliseconds)
 const SPARKLINE_UPDATE_INTERVAL = 5 * 60 * 1000;
 type MarketItemWithFallback = MarketItem & { isFallback?: boolean };
+
+function formatMarketTime(date = new Date()) {
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+    timeZone: DISPLAY_TIMEZONE,
+  });
+}
+
+function jsonNoStore(data: unknown, init?: ResponseInit) {
+  const response = NextResponse.json(data, init);
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+  return response;
+}
 
 // Initialize year start values if not already set
 function initializeYearStartValues(data: MarketData) {
@@ -82,7 +103,7 @@ async function generateRandomUpdates(data: MarketData) {
     if (shouldUpdateSparklines) {
       try {
         await redis.set("last_sparkline_update", currentTime.toString());
-        console.log("Updating sparklines at", new Date(currentTime).toLocaleTimeString());
+        console.log("Updating sparklines at", formatMarketTime(new Date(currentTime)));
       } catch (error) {
         console.warn("Error storing sparkline update time in Redis:", error);
       }
@@ -97,11 +118,7 @@ async function generateRandomUpdates(data: MarketData) {
               if (item.id === "BTC") {
                 return {
                   ...item,
-                  time: new Date().toLocaleTimeString("en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                  }),
+                  time: formatMarketTime(),
                   lastUpdated: new Date().toISOString(),
                 };
               }
@@ -195,11 +212,7 @@ async function generateRandomUpdates(data: MarketData) {
                 change: Number.parseFloat(cumulativeChange.toFixed(2)),
                 pctChange: Number.parseFloat(newPctChange.toFixed(2)),
                 avat: Number.parseFloat(newAvat.toFixed(2)),
-                time: new Date().toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }),
+                time: formatMarketTime(),
                 ytd: Number.parseFloat(newYtd.toFixed(2)),
                 ytdCur: Number.parseFloat(newYtdCur.toFixed(2)),
                 sparkline1,
@@ -214,11 +227,7 @@ async function generateRandomUpdates(data: MarketData) {
                 ...item,
                 sparkline1: item.sparkline1 || generateRandomSparkline(),
                 sparkline2: item.sparkline2 || generateRandomSparkline(),
-                time: new Date().toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }),
+                time: formatMarketTime(),
                 lastUpdated: new Date().toISOString(),
               };
             }
@@ -258,11 +267,7 @@ function getEnhancedFallbackData() {
           change: item.change || 0,
           pctChange: item.pctChange || 0,
           avat: item.avat || 0,
-          time: new Date().toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          }),
+          time: formatMarketTime(),
           ytd: item.ytd || 0,
           ytdCur: item.ytdCur || 0,
           sparkline1: generateRandomSparkline(),
@@ -361,11 +366,7 @@ async function applyLiveBtcPrice(data: MarketData) {
     value: Number.parseFloat(liveBtc.price.toFixed(2)),
     change: Number.parseFloat(liveBtc.change.toFixed(2)),
     pctChange: Number.parseFloat(liveBtc.pctChange.toFixed(2)),
-    time: new Date().toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }),
+    time: formatMarketTime(),
     lastUpdated: new Date().toISOString(),
   };
 
@@ -433,7 +434,7 @@ export async function GET() {
     // Initialize year start values for any views that still read this field.
     initializeYearStartValues(liveBtcUpdatedData);
 
-    return NextResponse.json({
+    return jsonNoStore({
       ...liveBtcUpdatedData,
       isFromRedis: servedFromRedis,
       fromRedis: servedFromRedis,
@@ -441,6 +442,7 @@ export async function GET() {
       source: liveBtcUpdatedData.dataSource || (servedFromRedis ? "redis" : "fallback"),
       isStale: fetchFailed || (liveBtcUpdatedData.dataSource ?? "").toLowerCase() === "fallback",
       lastLiveSuccessAt,
+      displayTimeZone: DISPLAY_TIMEZONE,
       lastFetched: new Date().toISOString(),
     });
   } catch (error) {
@@ -451,13 +453,14 @@ export async function GET() {
     // Initialize year start values
     initializeYearStartValues(enhancedFallbackData);
 
-    return NextResponse.json({
+    return jsonNoStore({
       ...enhancedFallbackData,
       isFromRedis: false,
       fromRedis: false,
       dataSource: "fallback",
       source: "fallback",
       error: String(error),
+      displayTimeZone: DISPLAY_TIMEZONE,
       lastUpdated: new Date().toISOString(),
     });
   }
@@ -520,16 +523,16 @@ export async function POST(request: Request) {
         }
       }
 
-      return NextResponse.json({
+      return jsonNoStore({
         success: true,
         message: "Market data updated successfully",
       });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return jsonNoStore({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("Error in market-data POST route:", error);
-    return NextResponse.json(
+    return jsonNoStore(
       {
         success: false,
         error: "Failed to process request",

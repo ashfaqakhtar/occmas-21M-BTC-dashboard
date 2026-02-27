@@ -22,6 +22,16 @@ export function TerminalHeader({ isDarkMode, onThemeToggle }: TerminalHeaderProp
   } = useMarketDataQuery();
 
   const colors = isDarkMode ? bloombergColors.dark : bloombergColors.light;
+  const normalizedSource = (dataSource || "").toLowerCase();
+  const sourceLabel = isFromRedis
+    ? "REDIS"
+    : normalizedSource === "live"
+      ? "LIVE"
+      : normalizedSource === "mixed"
+        ? "MIXED"
+        : normalizedSource === "fallback"
+          ? "FALLBACK"
+          : "UNKNOWN";
 
   return (
     <div className={`relative z-30 flex flex-wrap items-center gap-2 bg-[${colors.surface}] px-2 py-1`}>
@@ -63,7 +73,7 @@ export function TerminalHeader({ isDarkMode, onThemeToggle }: TerminalHeaderProp
         ) : (
           <Database className="h-3 w-3 text-yellow-500" />
         )}
-        <span>{dataSource === "alpha-vantage" ? "API" : isFromRedis ? "Redis" : "Fallback"}</span>
+        <span>{sourceLabel}</span>
         {lastUpdated && <span>{lastUpdated.toLocaleTimeString()}</span>}
       </div>
     </div>
