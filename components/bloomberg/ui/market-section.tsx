@@ -18,6 +18,19 @@ type MarketSectionProps = {
   updatedSparklines: Record<string, boolean>;
 };
 
+function getAlphabetLabel(index: number): string {
+  let value = index + 1;
+  let label = "";
+
+  while (value > 0) {
+    value -= 1;
+    label = String.fromCharCode(97 + (value % 26)) + label;
+    value = Math.floor(value / 26);
+  }
+
+  return `${label})`;
+}
+
 export function MarketSection({
   title,
   items,
@@ -136,6 +149,7 @@ export function MarketSection({
         <MarketRow
           key={`${item.id}-${index}`}
           item={item}
+          displayNum={getAlphabetLabel(index)}
           region={regionKey}
           isDarkMode={isDarkMode}
           updatedCells={updatedCells}

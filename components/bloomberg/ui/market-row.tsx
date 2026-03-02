@@ -217,6 +217,7 @@ import type { MarketItem } from "../types";
 
 type MarketRowProps = {
   item: MarketItem;
+  displayNum?: string;
   region: "americas" | "emea" | "asiaPacific";
   isDarkMode: boolean;
   updatedCells: Record<string, boolean>;
@@ -225,6 +226,7 @@ type MarketRowProps = {
 
 export function MarketRow({
   item,
+  displayNum,
   region,
   isDarkMode,
   updatedCells,
@@ -270,7 +272,7 @@ export function MarketRow({
       >
         <div className="flex items-center gap-2">
           <span className={`text-[${colors.textSecondary}] text-sm`}>
-            {item.num}
+            {displayNum ?? item.num}
           </span>
           <span className={`text-[${colors.accent}] text-sm font-medium`}>
             {item.id}
